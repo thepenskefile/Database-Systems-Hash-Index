@@ -2,6 +2,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.math.BigInteger;
 import java.util.Arrays;
 
 public class hashload {
@@ -11,7 +12,9 @@ public class hashload {
     final static int EMPTY_SLOT_INDICATOR = -1;
     final static int INT_BYTE_SIZE = 4;
     final static int START_POINTER_POSITION = 0;
+    final static int START_RECORD_POSITION = 0;
     final static int NUMBER_OF_ARGS = 1;
+    final static int PAGE_NUMBER_OFFSET = 3;
     
     //////////////////////////////////////////
     
@@ -45,23 +48,37 @@ public class hashload {
     	initialiseIndexFile(hashFile);
     	
     	heapFile.seek(START_POINTER_POSITION);
+    	
+    	System.out.println("HEAP LENGTH: " + heapFile.length());
 
     	// Search through pages
 	   	for(int pagePointer = START_POINTER_POSITION; pagePointer < heapFile.length(); pagePointer += pageSize) {
 	   		 
 			heapFile.seek(pagePointer);
 			byte[] pageBytes = new byte[pageSize];
-			heapFile.read(pageBytes);	
+			heapFile.read(pageBytes);
 			
-			// Search through records
-			for(int recordPointer = START_POINTER_POSITION; recordPointer < pageBytes.length; recordPointer += RECORD_SIZE ) {
-				
-				byte[] recordData = Arrays.copyOfRange(pageBytes, recordPointer, recordPointer + RECORD_SIZE);			        
-		        byte[] buildingNameBytes = Arrays.copyOfRange(recordData, BUILDING_NAME_OFFSET, BUILDING_NAME_OFFSET + BUILDING_NAME_BYTE_SIZE);			        
-				int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_INDEX_SLOTS);					
-				writeToIndex(hashFile, hashIndex, pagePointer + recordPointer);
-				
-			}	   		 
+            int numberOfRecordsOnPage = new BigInteger(Arrays.copyOfRange(pageBytes, pageSize - PAGE_NUMBER_OFFSET, pageSize)).intValue();
+            
+            for(int pageRecordNumber = START_RECORD_POSITION; pageRecordNumber < numberOfRecordsOnPage; pageRecordNumber++) {
+            	
+            	int recordPointer = pageRecordNumber * RECORD_SIZE;
+            	
+    			// Search through records
+    			
+    				byte[] recordData = Arrays.copyOfRange(pageBytes, recordPointer, recordPointer + RECORD_SIZE);
+    				
+    		        int propertyId = new BigInteger(Arrays.copyOfRange(recordData, YEAR_BYTE_SIZE + BLOCK_ID_BYTE_SIZE, YEAR_BYTE_SIZE + BLOCK_ID_BYTE_SIZE + PROPERTY_ID_BYTE_SIZE)).intValue();
+    		    	System.out.println("PROPERTY ID: " + propertyId);
+
+    				
+    		        byte[] buildingNameBytes = Arrays.copyOfRange(recordData, BUILDING_NAME_OFFSET, BUILDING_NAME_OFFSET + BUILDING_NAME_BYTE_SIZE);			        
+    				int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_INDEX_SLOTS);					
+    				writeToIndex(hashFile, hashIndex, pagePointer + recordPointer);
+    		    	System.out.println("HASH INDEXXXXXXXXXXXXX: " + hashIndex);	
+            	
+            }		
+   		 
 	   	}
 	   	
     }

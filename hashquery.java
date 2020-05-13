@@ -90,8 +90,8 @@ public class hashquery {
 		        float xCoordinate = ByteBuffer.wrap(Arrays.copyOfRange(recordData, valuePointer, valuePointer += COORDINATES_BYTE_SIZE)).getFloat();
 		        float yCoordinate = ByteBuffer.wrap(Arrays.copyOfRange(recordData, valuePointer, valuePointer += COORDINATES_BYTE_SIZE)).getFloat();
 		        String location = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += LOCATION_BYTE_SIZE)));
-		        
-		        if(buildingName.toLowerCase().equals(searchText.toLowerCase())) {
+		        	        
+		        if(buildingName.equals(searchText)) {
 					System.out.println("Census year: " + censusYear + "\n" + "Block ID: " + blockId + "\n" + "Property ID: " + propertyId + "\n" + "Base property ID: " + basePropertyId + "\n" + 
 										"Building name: " + buildingName + "\n" + "Street address: " + streetAddress + "\n" + "Small area: " + smallArea + "\n" + "Construction year: " + constructionYear + "\n" + 
 										"Refurbished year: " + refurbishedYear + "\n" + "Number floors: " + numberFloors + "\n" + "Predominant space use: " + predominantSpaceUse + "\n" + 
@@ -105,8 +105,7 @@ public class hashquery {
 		        }
 		        
 		        else {
-					System.out.println("Does this ever reach?");
-
+		        	
     				// Slot does not contain correct data, move to next one
     				currentHashIndex += INT_BYTE_SIZE;
     				
@@ -116,6 +115,7 @@ public class hashquery {
     				}
 		        }
 		        
+		        // If the entire file has been searched (we are back at the starting index) and there have been no matches, then the record does not exist 
 		        if(!recordFound && currentHashIndex == hashIndex) {
 					System.out.println("Record not found");
 		        	break;
@@ -125,9 +125,6 @@ public class hashquery {
  		} catch (IOException e) {
  			System.out.println("Record not found");
  		}
-         
-        heapFile.close();
-        hashFile.close();
          
 	}
 	
@@ -163,7 +160,11 @@ public class hashquery {
    	     	File hashFile = new File("hash." + pageSize);
             RandomAccessFile hash = new RandomAccessFile(hashFile, "r");
             
-			searchIndex(pageSize, queryText, heap, hash);
+			searchIndex(pageSize, queryText, heap, hash);			
+	         
+	        heap.close();
+	        hash.close();
+	        
 		} catch (FileNotFoundException e) {
 			System.out.println("Could not find file " + pageSize + ".heap");
 		} catch (IOException e) {
