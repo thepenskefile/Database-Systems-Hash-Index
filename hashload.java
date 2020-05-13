@@ -2,10 +2,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.math.BigInteger;
 import java.util.Arrays;
-import java.nio.ByteBuffer;
-
 
 public class hashload {
 
@@ -13,121 +10,60 @@ public class hashload {
     final static int NUMBER_OF_INDEX_SLOTS = 315000;
     final static int EMPTY_SLOT_INDICATOR = -1;
     final static int INT_BYTE_SIZE = 4;
+    final static int START_POINTER_POSITION = 0;
+    final static int NUMBER_OF_ARGS = 1;
+    
+    //////////////////////////////////////////
+    
+    final static int YEAR_BYTE_SIZE = INT_BYTE_SIZE;
+    final static int BLOCK_ID_BYTE_SIZE = INT_BYTE_SIZE;
+    final static int PROPERTY_ID_BYTE_SIZE = INT_BYTE_SIZE;
+    final static int BASE_PROPERTY_ID_BYTE_SIZE = INT_BYTE_SIZE;
+    final static int BUILDING_NAME_BYTE_SIZE = 65;
+    final static int STREET_ADDRESS_BYTE_SIZE = 35;
+    final static int SMALL_AREA_BYTE_SIZE = 30;
+    final static int NUMBER_FLOORS_BYTE_SIZE = INT_BYTE_SIZE;
+    final static int PREDOMINANT_SPACE_USE_BYTE_SIZE = 40;
+    final static int ACCESSIBILITY_TYPE_BYTE_SIZE = 35;
+    final static int ACCESSIBILITY_TYPE_DESCRIPTION_BYTE_SIZE = 85;
+    final static int ACCESSIBILITY_RATING_BYTE_SIZE = INT_BYTE_SIZE;
+    final static int BICYCLE_SPACES_BYTE_SIZE = INT_BYTE_SIZE;
+    final static int HAS_SHOWERS_BYTE_SIZE = INT_BYTE_SIZE;
+    final static int COORDINATES_BYTE_SIZE = INT_BYTE_SIZE;
+    final static int LOCATION_BYTE_SIZE = 30;
+    final static int BUILDING_NAME_OFFSET = YEAR_BYTE_SIZE + BLOCK_ID_BYTE_SIZE + PROPERTY_ID_BYTE_SIZE + BASE_PROPERTY_ID_BYTE_SIZE;    	
+    		
+    //////////////////////////////////////////
     
     private static int numberOfCollisions = 0;
+    private static int numberOfRecordsIndexed = 0;
     
-	// Trim any null bytes from the strings due to the fixed length records
-    private static String trimNulls(String str) {
-        int pos = str.indexOf(0);
-        return pos == -1 ? str : str.substring(0, pos);
-    }
+    //////////////////////////////////////////
     
-    private static void readHeapFile(int pageSize) throws IOException {
-		RandomAccessFile heapFile = new RandomAccessFile("heap." + pageSize, "r");
-		heapFile.seek(0);
-		
-	     File hashFile = new File("hash." + pageSize);
-         RandomAccessFile heapIndex = new RandomAccessFile(hashFile, "rw");
+    private static void readHeapFile(int pageSize, RandomAccessFile heapFile, RandomAccessFile hashFile) throws IOException  {
+   	
+    	initialiseIndexFile(hashFile);    	
+        
+    	heapFile.seek(START_POINTER_POSITION);
 
-		// Initialise index with -1 to indicate an empty position in all slots
-         for(int i = 0; i < NUMBER_OF_INDEX_SLOTS; i++) {
-             heapIndex.writeInt(EMPTY_SLOT_INDICATOR);
-         }                   
-		
-    	int yearByteSize = INT_BYTE_SIZE;
-    	int blockIdByteSize = INT_BYTE_SIZE;
-    	int propertyIdByteSize = INT_BYTE_SIZE;
-    	int basePropertyIdByteSize = INT_BYTE_SIZE;
-    	int buildingNameByteSize = 65;
-    	int streetAddressByteSize = 35;
-    	int smallAreaByteSize = 30;
-    	int numberFloorsByteSize = INT_BYTE_SIZE;
-    	int predominantSpaceUseByteSize = 40;
-    	int accessibilityTypeByteSize = 35;
-    	int accessibilityTypeDescriptionByteSize = 85;
-    	int accessibilityRatingByteSize = INT_BYTE_SIZE;
-    	int bicycleSpacesByteSize = INT_BYTE_SIZE;
-    	int hasShowersByteSize = INT_BYTE_SIZE;
-    	int coordinateByteSize = INT_BYTE_SIZE;
-    	int locationByteSize = 30;    	
-    	
-   	 
-	   	 for(int pagePointer = 0; pagePointer < heapFile.length(); pagePointer += pageSize) {
+    	// Search through pages
+	   	for(int pagePointer = START_POINTER_POSITION; pagePointer < heapFile.length(); pagePointer += pageSize) {
 	   		 
-				heapFile.seek(pagePointer);
-				byte[] pageBytes = new byte[pageSize];
-				heapFile.read(pageBytes);
+			heapFile.seek(pagePointer);
+			byte[] pageBytes = new byte[pageSize];
+			heapFile.read(pageBytes);	
+			
+			// Search through records
+			for(int recordPointer = START_POINTER_POSITION; recordPointer < pageBytes.length; recordPointer += RECORD_SIZE ) {
 				
-
+				byte[] recordData = Arrays.copyOfRange(pageBytes, recordPointer, recordPointer + RECORD_SIZE);			        
+		        byte[] buildingNameBytes = Arrays.copyOfRange(recordData, BUILDING_NAME_OFFSET, BUILDING_NAME_OFFSET + BUILDING_NAME_BYTE_SIZE);			        
+				int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_INDEX_SLOTS);					
+				writeToIndex(hashFile, hashIndex, pagePointer + recordPointer);
 				
-				for(int recordPointer = 0; recordPointer < pageBytes.length; recordPointer += RECORD_SIZE ) {
-					
-        			byte[] recordData = Arrays.copyOfRange(pageBytes, recordPointer, recordPointer + RECORD_SIZE);
-					int valuePointer = 0;
-					
-			        int censusYear = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += yearByteSize)).intValue();
-			        int blockId = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += blockIdByteSize)).intValue();
-			        int propertyId = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += propertyIdByteSize)).intValue();
-			        int basePropertyId = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += basePropertyIdByteSize)).intValue();
-//			        System.out.println("VALUE POINTER: " + valuePointer);
-			        String buildingName = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += buildingNameByteSize)));
-			        String streetAddress = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += streetAddressByteSize)));
-			        String smallArea = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += smallAreaByteSize)));
-			        int constructionYear = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += yearByteSize)).intValue();
-			        int refurbishedYear = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += yearByteSize)).intValue();
-			        int numberFloors = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += numberFloorsByteSize)).intValue();
-			        String predominantSpaceUse = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += predominantSpaceUseByteSize)));
-			        String accessibilityType = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += accessibilityTypeByteSize)));
-			        String accessibilityTypeDescription = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += accessibilityTypeDescriptionByteSize)));
-			        int accessibilityRating = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += accessibilityRatingByteSize)).intValue();
-			        int bicycleSpaces = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += bicycleSpacesByteSize)).intValue();
-			        int hasShowers = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += hasShowersByteSize)).intValue();
-			        float xCoordinate = ByteBuffer.wrap(Arrays.copyOfRange(recordData, valuePointer, valuePointer += coordinateByteSize)).getFloat();
-			        float yCoordinate = ByteBuffer.wrap(Arrays.copyOfRange(recordData, valuePointer, valuePointer += coordinateByteSize)).getFloat();
-			        String location = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += locationByteSize)));
-			        
-			        byte[] buildingNameBytes = Arrays.copyOfRange(recordData, 16, 16 + buildingNameByteSize);
-//			        String buildingName = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += buildingNameByteSize)));
-//			        System.out.println("BUILDING NAME: " + trimNulls(new String(buildingNameBytes)));
-			        
-					int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_INDEX_SLOTS);
-					
-					writeToIndex(heapIndex, hashIndex, pagePointer + recordPointer);
-
-			        
-			        if(buildingName.equals("RHUMBARALLAS")) {
-			        	System.out.println("HASH INDEX: " + hashIndex);
-			        	System.out.println("RECORD POINTER: " + recordPointer);
-
-				   	 	System.out.println("Census year: " + censusYear);
-					   	System.out.println("Block ID: " + blockId);
-					   	System.out.println("Property ID: " + propertyId);
-					   	System.out.println("Base property ID: " + basePropertyId);
-					   	System.out.println("Building name: " + buildingName);
-					   	System.out.println("Street address: " + streetAddress);
-					   	System.out.println("Small area: " + smallArea);
-					   	System.out.println("Construction year: " + constructionYear);
-					   	System.out.println("Refurbished year: " + refurbishedYear);
-					   	System.out.println("Number floors: " + numberFloors);
-					   	System.out.println("Predominant space use: " + predominantSpaceUse);
-					   	System.out.println("Accessibility type: " + accessibilityType);
-					   	System.out.println("AccessibilityTypeDescription: " + accessibilityTypeDescription);
-					   	System.out.println("AccessibilityRating: " + accessibilityRating);
-					   	System.out.println("Bicycle spaces: " + bicycleSpaces);
-					   	System.out.println("Has showers: " + hasShowers);
-					   	System.out.println("x coordinate: " + xCoordinate);
-					   	System.out.println("y coordinate: " + yCoordinate);
-					   	System.out.println("Location: " + location);
-					   	System.out.println("=====================================");
-			        }					
-					
-				}	   		 
-	   	 }
-	   	 
-	   	System.out.println("NUMBER OF COLLISIONS: " + numberOfCollisions);
-	   	heapFile.close();
-	   	heapIndex.close();
-	   	 
+			}	   		 
+	   	}
+	   	
     }
     
     private static void writeToIndex(RandomAccessFile heapIndex, int hashIndex, int recordPointer) {
@@ -135,27 +71,34 @@ public class hashload {
         try {
         	
         	int currentHashIndex = hashIndex;
+        	boolean recordSuccessfullyIndexed = false;
         	
-        	while(true) {        		
+        	while(!recordSuccessfullyIndexed) {
+        		
                 heapIndex.seek(currentHashIndex);
-                int slotHash = heapIndex.readInt();
-    			heapIndex.seek(currentHashIndex);
-    			
-    			if(slotHash == EMPTY_SLOT_INDICATOR) {
-    				// There has not been a collision
-    	             heapIndex.writeInt(recordPointer);
-    	             break;
+                int slotPointer = heapIndex.readInt();
+    			heapIndex.seek(currentHashIndex);    			
+
+    			if(slotPointer == EMPTY_SLOT_INDICATOR) {
+        			
+    				// There has not been a collision, and we can insert the pointer at this index
+    	            heapIndex.writeInt(recordPointer);
+    	            numberOfRecordsIndexed++;
+    	             
+    	            recordSuccessfullyIndexed = true;
     			}
+    			
     			else {
-    				// There has been a collision
+    				
+        			// There has been a collision, and we need to use linear probing to find the next available slot to insert the pointer  				
     				numberOfCollisions++;
     				
-    				// Slot is occupied, so check the next one
+    				// Move to the next slot
     				currentHashIndex += INT_BYTE_SIZE;
     				
-    				// If the end of the file is reached, go back to the start
+    				// If the end of the file is reached, go back to the beginning and continue searching for an available slot
     				if(currentHashIndex >= NUMBER_OF_INDEX_SLOTS -1) {
-    					currentHashIndex = 0;
+    					currentHashIndex = START_POINTER_POSITION;
     				}
     			}
         	}			
@@ -164,32 +107,65 @@ public class hashload {
 			System.out.println("Error trying to write to hash index file");
 		}
     }
+    
+	/**
+	 * Function to initialise all index slots with -1 to indicate the slot it empty
+	 */  
+    private static void initialiseIndexFile(RandomAccessFile hashFile) {
+  	
+    	for(int i = START_POINTER_POSITION; i < NUMBER_OF_INDEX_SLOTS; i++) {
+    		
+        	try {
+				hashFile.writeInt(EMPTY_SLOT_INDICATOR);
+			} catch (IOException e) {				
+                System.err.println("Error! Could not initialise index file");
+			}
+        }
+    }
 
 	
 	public static void main(String[] args) {
+		
         int pageSize = 0;
 
         long startTime = System.nanoTime();
 
-        if (args.length != 1) {
+        if (args.length != NUMBER_OF_ARGS) {
+        	
             System.err.println("Error! Usage: java hashload pagesize");
+            
         } else {
-            try {
-                pageSize = Integer.parseInt(args[0]);
-            } catch(NumberFormatException e) {
+        	
+        	try {            	
+            	pageSize = Integer.parseInt(args[0]);                
+            } catch(NumberFormatException e) {            	
                 System.err.println("Error! pagesize value must be an integer.");
             }
         }
         
         try {
-			readHeapFile(pageSize);
-		} catch (FileNotFoundException e) {
-			System.out.println("Could not find file " + pageSize + ".heap");
+        	
+        	File heapFile = new File("heap." + pageSize);
+    		RandomAccessFile heap = new RandomAccessFile(heapFile, "r");
+   	     	File hashFile = new File("hash." + pageSize);
+            RandomAccessFile hash = new RandomAccessFile(hashFile, "rw");
+
+			readHeapFile(pageSize, heap, hash);
+			
+			heap.close();
+			hash.close();		
+			
+		} catch (FileNotFoundException e) {			
+			System.out.println("Error finding file");			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
         
-	}
-	
+		long endTime = System.nanoTime(); 
+	    double totalTime = (double)(endTime - startTime) / 1_000_000_000;
+	    
+	    System.out.println("Data loaded in: " + totalTime + " seconds");
+	    System.out.println("Number of records indexed: " + numberOfRecordsIndexed);
+	    System.out.println("Number of collisions: " + numberOfCollisions);
+	}	
 }
