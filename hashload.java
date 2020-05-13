@@ -1,3 +1,4 @@
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -9,6 +10,8 @@ import java.nio.ByteBuffer;
 public class hashload {
 
     final static int RECORD_SIZE = 368;
+    final static int NUMBER_OF_INDEX_SLOTS = 315000;
+    final static int EMPTY_SLOT_INDICATOR = -1;
     
     
 	// Trim any null bytes from the strings due to the fixed length records
@@ -19,7 +22,15 @@ public class hashload {
     
     private static void readHeapFile(int pageSize) throws IOException {
 		RandomAccessFile heapFile = new RandomAccessFile("heap." + pageSize, "r");
-		heapFile.seek(0);	
+		heapFile.seek(0);
+		
+	     File hashFile = new File("hash." + pageSize);
+         RandomAccessFile heapIndex = new RandomAccessFile(hashFile, "rw");
+
+		// Initialise index with -1 to indicate an empty position in all slots
+         for(int i = 0; i < NUMBER_OF_INDEX_SLOTS; i++) {
+             heapIndex.writeInt(EMPTY_SLOT_INDICATOR);
+         }                   
 		
     	int intByteSize = 4;
     	int yearByteSize = intByteSize;
@@ -44,7 +55,9 @@ public class hashload {
 	   		 
 				heapFile.seek(pagePointer);
 				byte[] pageBytes = new byte[pageSize];
-				heapFile.read(pageBytes);				
+				heapFile.read(pageBytes);
+				
+
 				
 				for(int recordPointer = 0; recordPointer <= pageBytes.length; recordPointer += RECORD_SIZE ) {
 					
@@ -55,6 +68,7 @@ public class hashload {
 			        int blockId = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += blockIdByteSize)).intValue();
 			        int propertyId = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += propertyIdByteSize)).intValue();
 			        int basePropertyId = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += basePropertyIdByteSize)).intValue();
+//			        System.out.println("VALUE POINTER: " + valuePointer);
 			        String buildingName = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += buildingNameByteSize)));
 			        String streetAddress = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += streetAddressByteSize)));
 			        String smallArea = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += smallAreaByteSize)));
@@ -70,6 +84,15 @@ public class hashload {
 			        float xCoordinate = ByteBuffer.wrap(Arrays.copyOfRange(recordData, valuePointer, valuePointer += coordinateByteSize)).getFloat();
 			        float yCoordinate = ByteBuffer.wrap(Arrays.copyOfRange(recordData, valuePointer, valuePointer += coordinateByteSize)).getFloat();
 			        String location = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += locationByteSize)));
+			        
+			        byte[] buildingNameBytes = Arrays.copyOfRange(recordData, 16, 16 + buildingNameByteSize);
+//			        String buildingName = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += buildingNameByteSize)));
+			        System.out.println("BUILDING NAME: " + trimNulls(new String(buildingNameBytes)));
+			       
+			        
+					int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_INDEX_SLOTS);
+					System.out.println("HASH INDEX: " + hashIndex);
+
 			        
 			        if(false) {
 				   	 	 System.out.println("Census year: " + censusYear);
@@ -98,8 +121,15 @@ public class hashload {
 	   	 }
 	   	 
 	   	heapFile.close();
+	   	heapIndex.close();
 	   	 
     }
+    
+//    private static void writeToIndex() {
+//        hashRaf.seek(hashIndex);
+//        int checkPosHash = hashRaf.readInt();
+//        hashRaf.seek(hashIndex);
+//    }
 
 	
 	public static void main(String[] args) {
