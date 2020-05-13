@@ -42,8 +42,8 @@ public class hashload {
     
     private static void readHeapFile(int pageSize, RandomAccessFile heapFile, RandomAccessFile hashFile) throws IOException  {
    	
-    	initialiseIndexFile(hashFile);    	
-        
+    	initialiseIndexFile(hashFile);
+    	
     	heapFile.seek(START_POINTER_POSITION);
 
     	// Search through pages
@@ -164,7 +164,7 @@ public class hashload {
 		long endTime = System.nanoTime(); 
 	    double totalTime = (double)(endTime - startTime) / 1_000_000_000;
 	    
-	    System.out.println("Data loaded in: " + totalTime + " seconds");
+	    System.out.println("Data indexed in: " + totalTime + " seconds");
 	    System.out.println("Number of records indexed: " + numberOfRecordsIndexed);
 	    System.out.println("Number of collisions: " + numberOfCollisions);
 	}	
