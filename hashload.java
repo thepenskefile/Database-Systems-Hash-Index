@@ -88,36 +88,37 @@ public class hashload {
 			        
 			        byte[] buildingNameBytes = Arrays.copyOfRange(recordData, 16, 16 + buildingNameByteSize);
 //			        String buildingName = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += buildingNameByteSize)));
-			        System.out.println("BUILDING NAME: " + trimNulls(new String(buildingNameBytes)));
-			       
+//			        System.out.println("BUILDING NAME: " + trimNulls(new String(buildingNameBytes)));
 			        
 					int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_INDEX_SLOTS);
-					System.out.println("HASH INDEX: " + hashIndex);
 					
 					writeToIndex(heapIndex, hashIndex, pagePointer + recordPointer);
 
 			        
-			        if(false) {
-				   	 	 System.out.println("Census year: " + censusYear);
-					   	 System.out.println("Block ID: " + blockId);
-					   	 System.out.println("Property ID: " + propertyId);
-					   	 System.out.println("Base property ID: " + basePropertyId);
-					   	 System.out.println("Building name: " + buildingName);
-					   	 System.out.println("Street address: " + streetAddress);
-					   	 System.out.println("Small area: " + smallArea);
-					   	 System.out.println("Construction year: " + constructionYear);
-					   	 System.out.println("Refurbished year: " + refurbishedYear);
-					   	 System.out.println("Number floors: " + numberFloors);
-					   	 System.out.println("Predominant space use: " + predominantSpaceUse);
-					   	 System.out.println("Accessibility type: " + accessibilityType);
-					   	 System.out.println("AccessibilityTypeDescription: " + accessibilityTypeDescription);
-					   	 System.out.println("AccessibilityRating: " + accessibilityRating);
-					   	 System.out.println("Bicycle spaces: " + bicycleSpaces);
-					   	 System.out.println("Has showers: " + hasShowers);
-					   	 System.out.println("x coordinate: " + xCoordinate);
-					   	 System.out.println("y coordinate: " + yCoordinate);
-					   	 System.out.println("Location: " + location);
-					   	 System.out.println("=====================================");
+			        if(buildingName.equals("RHUMBARALLAS")) {
+			        	System.out.println("HASH INDEX: " + hashIndex);
+			        	System.out.println("RECORD POINTER: " + recordPointer);
+
+				   	 	System.out.println("Census year: " + censusYear);
+					   	System.out.println("Block ID: " + blockId);
+					   	System.out.println("Property ID: " + propertyId);
+					   	System.out.println("Base property ID: " + basePropertyId);
+					   	System.out.println("Building name: " + buildingName);
+					   	System.out.println("Street address: " + streetAddress);
+					   	System.out.println("Small area: " + smallArea);
+					   	System.out.println("Construction year: " + constructionYear);
+					   	System.out.println("Refurbished year: " + refurbishedYear);
+					   	System.out.println("Number floors: " + numberFloors);
+					   	System.out.println("Predominant space use: " + predominantSpaceUse);
+					   	System.out.println("Accessibility type: " + accessibilityType);
+					   	System.out.println("AccessibilityTypeDescription: " + accessibilityTypeDescription);
+					   	System.out.println("AccessibilityRating: " + accessibilityRating);
+					   	System.out.println("Bicycle spaces: " + bicycleSpaces);
+					   	System.out.println("Has showers: " + hasShowers);
+					   	System.out.println("x coordinate: " + xCoordinate);
+					   	System.out.println("y coordinate: " + yCoordinate);
+					   	System.out.println("Location: " + location);
+					   	System.out.println("=====================================");
 			        }					
 					
 				}	   		 
