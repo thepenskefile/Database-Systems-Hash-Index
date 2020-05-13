@@ -12,7 +12,9 @@ public class hashload {
     final static int RECORD_SIZE = 368;
     final static int NUMBER_OF_INDEX_SLOTS = 315000;
     final static int EMPTY_SLOT_INDICATOR = -1;
+    final static int INT_BYTE_SIZE = 4;
     
+    private static int numberOfCollisions = 0;
     
 	// Trim any null bytes from the strings due to the fixed length records
     private static String trimNulls(String str) {
@@ -32,26 +34,25 @@ public class hashload {
              heapIndex.writeInt(EMPTY_SLOT_INDICATOR);
          }                   
 		
-    	int intByteSize = 4;
-    	int yearByteSize = intByteSize;
-    	int blockIdByteSize = intByteSize;
-    	int propertyIdByteSize = intByteSize;
-    	int basePropertyIdByteSize = intByteSize;
+    	int yearByteSize = INT_BYTE_SIZE;
+    	int blockIdByteSize = INT_BYTE_SIZE;
+    	int propertyIdByteSize = INT_BYTE_SIZE;
+    	int basePropertyIdByteSize = INT_BYTE_SIZE;
     	int buildingNameByteSize = 65;
     	int streetAddressByteSize = 35;
     	int smallAreaByteSize = 30;
-    	int numberFloorsByteSize = intByteSize;
+    	int numberFloorsByteSize = INT_BYTE_SIZE;
     	int predominantSpaceUseByteSize = 40;
     	int accessibilityTypeByteSize = 35;
     	int accessibilityTypeDescriptionByteSize = 85;
-    	int accessibilityRatingByteSize = intByteSize;
-    	int bicycleSpacesByteSize = intByteSize;
-    	int hasShowersByteSize = intByteSize;
-    	int coordinateByteSize = intByteSize;
+    	int accessibilityRatingByteSize = INT_BYTE_SIZE;
+    	int bicycleSpacesByteSize = INT_BYTE_SIZE;
+    	int hasShowersByteSize = INT_BYTE_SIZE;
+    	int coordinateByteSize = INT_BYTE_SIZE;
     	int locationByteSize = 30;    	
     	
    	 
-	   	 for(int pagePointer = 0; pagePointer <= heapFile.length(); pagePointer += pageSize) {
+	   	 for(int pagePointer = 0; pagePointer < heapFile.length(); pagePointer += pageSize) {
 	   		 
 				heapFile.seek(pagePointer);
 				byte[] pageBytes = new byte[pageSize];
@@ -59,7 +60,7 @@ public class hashload {
 				
 
 				
-				for(int recordPointer = 0; recordPointer <= pageBytes.length; recordPointer += RECORD_SIZE ) {
+				for(int recordPointer = 0; recordPointer < pageBytes.length; recordPointer += RECORD_SIZE ) {
 					
         			byte[] recordData = Arrays.copyOfRange(pageBytes, recordPointer, recordPointer + RECORD_SIZE);
 					int valuePointer = 0;
@@ -92,6 +93,8 @@ public class hashload {
 			        
 					int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_INDEX_SLOTS);
 					System.out.println("HASH INDEX: " + hashIndex);
+					
+					writeToIndex(heapIndex, hashIndex, pagePointer + recordPointer);
 
 			        
 			        if(false) {
@@ -120,16 +123,46 @@ public class hashload {
 				}	   		 
 	   	 }
 	   	 
+	   	System.out.println("NUMBER OF COLLISIONS: " + numberOfCollisions);
 	   	heapFile.close();
 	   	heapIndex.close();
 	   	 
     }
     
-//    private static void writeToIndex() {
-//        hashRaf.seek(hashIndex);
-//        int checkPosHash = hashRaf.readInt();
-//        hashRaf.seek(hashIndex);
-//    }
+    private static void writeToIndex(RandomAccessFile heapIndex, int hashIndex, int recordPointer) {
+    	
+        try {
+        	
+        	int currentHashIndex = hashIndex;
+        	
+        	while(true) {        		
+                heapIndex.seek(currentHashIndex);
+                int slotHash = heapIndex.readInt();
+    			heapIndex.seek(currentHashIndex);
+    			
+    			if(slotHash == EMPTY_SLOT_INDICATOR) {
+    				// There has not been a collision
+    	             heapIndex.writeInt(recordPointer);
+    	             break;
+    			}
+    			else {
+    				// There has been a collision
+    				numberOfCollisions++;
+    				
+    				// Slot is occupied, so check the next one
+    				currentHashIndex += INT_BYTE_SIZE;
+    				
+    				// If the end of the file is reached, go back to the start
+    				if(currentHashIndex >= NUMBER_OF_INDEX_SLOTS -1) {
+    					currentHashIndex = 0;
+    				}
+    			}
+        	}			
+			
+		} catch (IOException e) {
+			System.out.println("Error trying to write to hash index file");
+		}
+    }
 
 	
 	public static void main(String[] args) {
