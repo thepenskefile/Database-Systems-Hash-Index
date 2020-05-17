@@ -74,10 +74,10 @@ public class hashload {
             
             for(int pageRecordNumber = START_RECORD_POSITION; pageRecordNumber < numberOfRecordsOnPage; pageRecordNumber++) {
             	
-            	int recordPointer = pageRecordNumber * RECORD_SIZE;
-            	
-    			// Search through records    			
+            	int recordPointer = pageRecordNumber * RECORD_SIZE;            	
+    			// Search through record
 				byte[] recordData = Arrays.copyOfRange(pageBytes, recordPointer, recordPointer + RECORD_SIZE);  					
+				// Find building name
 		        byte[] buildingNameBytes = Arrays.copyOfRange(recordData, BUILDING_NAME_OFFSET, BUILDING_NAME_OFFSET + BUILDING_NAME_BYTE_SIZE);
 		    	String buildingNameString = trimNulls(new String(buildingNameBytes));
 		    	// Do not index records where the building name does not exist
@@ -117,10 +117,8 @@ public class hashload {
     			else {
     				
         			// There has been a collision, and we need to use linear probing to find the next available slot to insert the pointer
-    				if(currentHashIndex > hashIndex * BUCKET_SIZE) {
-        				numberOfCollisions++;
-    				}
-    				
+        			numberOfCollisions++;
+    				    				
     				// Move to the next slot
     				currentHashIndex += INT_BYTE_SIZE;
     				

@@ -9,10 +9,7 @@ import java.util.Arrays;
 public class hashquery {
     
     final static int RECORD_SIZE = 368;
-    final static int NUMBER_OF_INDEX_SLOTS = 315000;
-    final static int EMPTY_SLOT_INDICATOR = -1;
     final static int INT_BYTE_SIZE = 4;
-    final static int START_POINTER_POSITION = 0;
     final static int NUMBER_OF_ARGS = 1;
     
     //////////////////////////////////////////
@@ -37,6 +34,15 @@ public class hashquery {
     		
     //////////////////////////////////////////
     
+    final static int NUMBER_OF_INDEX_SLOTS = 315000;
+    final static int NUMBER_OF_BUCKETS = 63000;
+    final static int BUCKET_SIZE = 5 * INT_BYTE_SIZE;
+    final static int PAGE_NUMBER_OFFSET = 3;
+    final static int EMPTY_SLOT_INDICATOR = -1;
+    final static int START_POINTER_POSITION = 0;
+    
+    //////////////////////////////////////////
+    
     /**
      * Function to trim any null bytes from strings that were used to pad the string for the fixed length record
      * 
@@ -52,23 +58,21 @@ public class hashquery {
 		byte[] buildingNameBytes = Arrays.copyOf(searchText.getBytes(), BUILDING_NAME_BYTE_SIZE);
 		
 		// Hash the search text
-        int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_INDEX_SLOTS);
-         
+		int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_BUCKETS) * BUCKET_SIZE;		
+
          try {
         	 
-          	int currentHashIndex = hashIndex;
-          	boolean recordFound = false;
-         	
-         	while(!recordFound) {
+          	int currentBucketNumber = hashIndex;         	
          		         		
-         		hashFile.seek(currentHashIndex);
-                int slotPointer = hashFile.readInt();
-                hashFile.seek(currentHashIndex);
-
-	            heapFile.seek(slotPointer);
+     		hashFile.seek(currentBucketNumber);
+            int bucketNumber = hashFile.readInt();
+            
+            // Read all records in the bucket
+            for(int record = 0; record < bucketNumber * BUCKET_SIZE; record += RECORD_SIZE) {
+            	heapFile.seek(bucketNumber + record);
 				byte[] recordData = new byte[RECORD_SIZE];
 				heapFile.read(recordData);
-								
+				
 				int valuePointer = 0;
 				
 		        int censusYear = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += YEAR_BYTE_SIZE)).intValue();
@@ -90,7 +94,7 @@ public class hashquery {
 		        float xCoordinate = ByteBuffer.wrap(Arrays.copyOfRange(recordData, valuePointer, valuePointer += COORDINATES_BYTE_SIZE)).getFloat();
 		        float yCoordinate = ByteBuffer.wrap(Arrays.copyOfRange(recordData, valuePointer, valuePointer += COORDINATES_BYTE_SIZE)).getFloat();
 		        String location = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += LOCATION_BYTE_SIZE)));
-		        	        
+		        
 		        if(buildingName.equals(searchText)) {
 					System.out.println("Census year: " + censusYear + "\n" + "Block ID: " + blockId + "\n" + "Property ID: " + propertyId + "\n" + "Base property ID: " + basePropertyId + "\n" + 
 										"Building name: " + buildingName + "\n" + "Street address: " + streetAddress + "\n" + "Small area: " + smallArea + "\n" + "Construction year: " + constructionYear + "\n" + 
@@ -101,26 +105,8 @@ public class hashquery {
 					
 					System.out.println("=====================================");
 					
-		            recordFound = true;
 		        }
-		        
-		        else {
-		        	
-    				// Slot does not contain correct data, move to next one
-    				currentHashIndex += INT_BYTE_SIZE;
-    				
-    				// If the end of the file is reached, go back to the start
-    				if(currentHashIndex >= NUMBER_OF_INDEX_SLOTS -1) {
-    					currentHashIndex = 0;
-    				}
-		        }
-		        
-		        // If the entire file has been searched (we are back at the starting index) and there have been no matches, then the record does not exist 
-		        if(!recordFound && currentHashIndex == hashIndex) {
-					System.out.println("Record not found");
-		        	break;
-		        }
-         	}			
+            }         		
  			
  		} catch (IOException e) {
  			System.out.println("Record not found");
@@ -174,7 +160,7 @@ public class hashquery {
 		long endTime = System.nanoTime(); 
 	    double totalTime = (double)(endTime - startTime) / 1_000_000_000;
 	    
-	    System.out.println("Data record found in: " + totalTime + " seconds");
+	    System.out.println("Data records found in: " + totalTime + " seconds");
 		
 	}
 
