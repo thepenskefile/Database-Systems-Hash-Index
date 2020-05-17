@@ -7,14 +7,10 @@ import java.util.Arrays;
 
 public class hashload {
 
-    final static int RECORD_SIZE = 368;
-    final static int NUMBER_OF_INDEX_SLOTS = 315000;
-    final static int EMPTY_SLOT_INDICATOR = -1;
     final static int INT_BYTE_SIZE = 4;
-    final static int START_POINTER_POSITION = 0;
+    final static int RECORD_SIZE = 368;
     final static int START_RECORD_POSITION = 0;
     final static int NUMBER_OF_ARGS = 1;
-    final static int PAGE_NUMBER_OFFSET = 3;
     
     //////////////////////////////////////////
     
@@ -38,10 +34,28 @@ public class hashload {
     		
     //////////////////////////////////////////
     
+    final static int NUMBER_OF_INDEX_SLOTS = 315000;
+    final static int NUMBER_OF_BUCKETS = 63000;
+    final static int BUCKET_SIZE = 5 * INT_BYTE_SIZE;
+    final static int PAGE_NUMBER_OFFSET = 3;
+    final static int EMPTY_SLOT_INDICATOR = -1;
+    final static int START_POINTER_POSITION = 0;
+    
+    //////////////////////////////////////////
+    
     private static int numberOfCollisions = 0;
     private static int numberOfRecordsIndexed = 0;
     
     //////////////////////////////////////////
+    
+    /**
+     * Function to trim any null bytes from strings that were used to pad the string for the fixed length record
+     * 
+     */
+    private static String trimNulls(String str) {
+        int position = str.indexOf(0);
+        return position == -1 ? str : str.substring(0, position);
+    }
     
     private static void readHeapFile(int pageSize, RandomAccessFile heapFile, RandomAccessFile hashFile) throws IOException  {
    	
@@ -49,8 +63,6 @@ public class hashload {
     	
     	heapFile.seek(START_POINTER_POSITION);
     	
-    	System.out.println("HEAP LENGTH: " + heapFile.length());
-
     	// Search through pages
 	   	for(int pagePointer = START_POINTER_POSITION; pagePointer < heapFile.length(); pagePointer += pageSize) {
 	   		 
@@ -64,18 +76,15 @@ public class hashload {
             	
             	int recordPointer = pageRecordNumber * RECORD_SIZE;
             	
-    			// Search through records
-    			
-    				byte[] recordData = Arrays.copyOfRange(pageBytes, recordPointer, recordPointer + RECORD_SIZE);
-    				
-    		        int propertyId = new BigInteger(Arrays.copyOfRange(recordData, YEAR_BYTE_SIZE + BLOCK_ID_BYTE_SIZE, YEAR_BYTE_SIZE + BLOCK_ID_BYTE_SIZE + PROPERTY_ID_BYTE_SIZE)).intValue();
-    		    	System.out.println("PROPERTY ID: " + propertyId);
-
-    				
-    		        byte[] buildingNameBytes = Arrays.copyOfRange(recordData, BUILDING_NAME_OFFSET, BUILDING_NAME_OFFSET + BUILDING_NAME_BYTE_SIZE);			        
-    				int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_INDEX_SLOTS);					
-    				writeToIndex(hashFile, hashIndex, pagePointer + recordPointer);
-    		    	System.out.println("HASH INDEXXXXXXXXXXXXX: " + hashIndex);	
+    			// Search through records    			
+				byte[] recordData = Arrays.copyOfRange(pageBytes, recordPointer, recordPointer + RECORD_SIZE);  					
+		        byte[] buildingNameBytes = Arrays.copyOfRange(recordData, BUILDING_NAME_OFFSET, BUILDING_NAME_OFFSET + BUILDING_NAME_BYTE_SIZE);
+		    	String buildingNameString = trimNulls(new String(buildingNameBytes));
+		    	// Do not index records where the building name does not exist
+		    	if(!buildingNameString.equals("null")) {
+					int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_BUCKETS) * BUCKET_SIZE;					
+					writeToIndex(hashFile, hashIndex, pagePointer + recordPointer);
+		    	}
             	
             }		
    		 
@@ -107,14 +116,16 @@ public class hashload {
     			
     			else {
     				
-        			// There has been a collision, and we need to use linear probing to find the next available slot to insert the pointer  				
-    				numberOfCollisions++;
+        			// There has been a collision, and we need to use linear probing to find the next available slot to insert the pointer
+    				if(currentHashIndex > hashIndex * BUCKET_SIZE) {
+        				numberOfCollisions++;
+    				}
     				
     				// Move to the next slot
     				currentHashIndex += INT_BYTE_SIZE;
     				
     				// If the end of the file is reached, go back to the beginning and continue searching for an available slot
-    				if(currentHashIndex >= NUMBER_OF_INDEX_SLOTS -1) {
+    				if(currentHashIndex >= (NUMBER_OF_BUCKETS * BUCKET_SIZE) - 1) {
     					currentHashIndex = START_POINTER_POSITION;
     				}
     			}
@@ -130,7 +141,7 @@ public class hashload {
 	 */  
     private static void initialiseIndexFile(RandomAccessFile hashFile) {
   	
-    	for(int i = START_POINTER_POSITION; i < NUMBER_OF_INDEX_SLOTS; i++) {
+    	for(int i = START_POINTER_POSITION; i < (NUMBER_OF_BUCKETS * BUCKET_SIZE); i++) {
     		
         	try {
 				hashFile.writeInt(EMPTY_SLOT_INDICATOR);
