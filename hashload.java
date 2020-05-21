@@ -57,11 +57,11 @@ public class hashload {
         return position == -1 ? str : str.substring(0, position);
     }
     
-    private static void readHeapFile(int pageSize, RandomAccessFile heapFile, RandomAccessFile hashFile) throws IOException  {
-   	
+    private static void readHeapFile(int pageSize, RandomAccessFile heapFile, RandomAccessFile hashFile) throws IOException  {    	
+  	
     	initialiseIndexFile(hashFile);
     	
-    	heapFile.seek(START_POINTER_POSITION);
+    	heapFile.seek(START_POINTER_POSITION);    	
     	
     	// Search through pages
 	   	for(int pagePointer = START_POINTER_POSITION; pagePointer < heapFile.length(); pagePointer += pageSize) {
@@ -73,8 +73,7 @@ public class hashload {
             int numberOfRecordsOnPage = new BigInteger(Arrays.copyOfRange(pageBytes, pageSize - PAGE_NUMBER_OFFSET, pageSize)).intValue();
             
             for(int pageRecordNumber = START_RECORD_POSITION; pageRecordNumber < numberOfRecordsOnPage; pageRecordNumber++) {
-            	
-            	int recordPointer = pageRecordNumber * RECORD_SIZE;            	
+            	int recordPointer = pageRecordNumber * RECORD_SIZE;
     			// Search through record
 				byte[] recordData = Arrays.copyOfRange(pageBytes, recordPointer, recordPointer + RECORD_SIZE);  					
 				// Find building name
@@ -82,13 +81,13 @@ public class hashload {
 		    	String buildingNameString = trimNulls(new String(buildingNameBytes));
 		    	// Do not index records where the building name does not exist
 		    	if(!buildingNameString.equals("null")) {
-					int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_BUCKETS) * BUCKET_SIZE;					
+					int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_BUCKETS) * BUCKET_SIZE;
 					writeToIndex(hashFile, hashIndex, pagePointer + recordPointer);
 		    	}
             	
             }		
    		 
-	   	}
+	   	}   	
 	   	
     }
     
@@ -106,7 +105,7 @@ public class hashload {
     			heapIndex.seek(currentHashIndex);    			
 
     			if(slotPointer == EMPTY_SLOT_INDICATOR) {
-        			
+    				       			
     				// There has not been a collision, and we can insert the pointer at this index
     	            heapIndex.writeInt(recordPointer);
     	            numberOfRecordsIndexed++;

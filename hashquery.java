@@ -62,14 +62,15 @@ public class hashquery {
 
          try {
         	 
-          	int currentBucketNumber = hashIndex;         	
-         		         		
+          	int currentBucketNumber = hashIndex;
+                   		         		
      		hashFile.seek(currentBucketNumber);
-            int bucketNumber = hashFile.readInt();
+     		
+     		int recordOffset = hashFile.readInt();
             
-            // Read all records in the bucket
-            for(int record = 0; record < bucketNumber * BUCKET_SIZE; record += RECORD_SIZE) {
-            	heapFile.seek(bucketNumber + record);
+            for(int i = recordOffset; i < recordOffset + (RECORD_SIZE * (BUCKET_SIZE / INT_BYTE_SIZE)); i += RECORD_SIZE) {
+            	
+            	heapFile.seek(i);
 				byte[] recordData = new byte[RECORD_SIZE];
 				heapFile.read(recordData);
 				
@@ -106,7 +107,9 @@ public class hashquery {
 					System.out.println("=====================================");
 					
 		        }
-            }         		
+
+            	
+            }
  			
  		} catch (IOException e) {
  			System.out.println("Record not found");
@@ -119,9 +122,7 @@ public class hashquery {
 				
         int pageSize = 0;
         String queryText = "";
-
-        long startTime = System.nanoTime();
-
+                
         if (args.length < 2) {
             System.err.println("Error! Usage: java hashquery querytext pagesize");
         } else {
@@ -139,14 +140,16 @@ public class hashquery {
             }
         }
         
+        long startTime = System.nanoTime();
+
         try {
         	
         	File heapFile = new File("heap." + pageSize);
     		RandomAccessFile heap = new RandomAccessFile(heapFile, "r");
    	     	File hashFile = new File("hash." + pageSize);
             RandomAccessFile hash = new RandomAccessFile(hashFile, "r");
-            
-			searchIndex(pageSize, queryText, heap, hash);			
+            System.out.println("QUERY: !" + queryText + "!");
+			searchIndex(pageSize, queryText, heap, hash);
 	         
 	        heap.close();
 	        hash.close();
@@ -157,7 +160,8 @@ public class hashquery {
 			e.printStackTrace();
 		}
         
-		long endTime = System.nanoTime(); 
+        long endTime = System.nanoTime();
+		
 	    double totalTime = (double)(endTime - startTime) / 1_000_000_000;
 	    
 	    System.out.println("Data records found in: " + totalTime + " seconds");
