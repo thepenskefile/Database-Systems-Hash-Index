@@ -35,8 +35,8 @@ public class hashquery {
     //////////////////////////////////////////
     
     final static int NUMBER_OF_INDEX_SLOTS = 315000;
-    final static int NUMBER_OF_BUCKETS = 63000;
-    final static int BUCKET_SIZE = 5 * INT_BYTE_SIZE;
+    final static int NUMBER_OF_BUCKETS = 67733;
+    final static int BUCKET_SIZE = 30 * INT_BYTE_SIZE;
     final static int PAGE_NUMBER_OFFSET = 3;
     final static int EMPTY_SLOT_INDICATOR = -1;
     final static int START_POINTER_POSITION = 0;
@@ -52,29 +52,37 @@ public class hashquery {
         return position == -1 ? str : str.substring(0, position);
     }
 	
-	private static void searchIndex(int pageSize, String searchText, RandomAccessFile heapFile, RandomAccessFile hashFile) throws IOException {
+	private static int searchIndex(int pageSize, String searchText, RandomAccessFile heapFile, RandomAccessFile hashFile) throws IOException {
                          
 		// Convert search text to bytes
 		byte[] buildingNameBytes = Arrays.copyOf(searchText.getBytes(), BUILDING_NAME_BYTE_SIZE);
 		
+      	int numberOfRecordsFound = 0;
+		
 		// Hash the search text
-		int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_BUCKETS) * BUCKET_SIZE;		
+		int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_BUCKETS) * BUCKET_SIZE;
 
          try {
         	 
-          	int currentBucketNumber = hashIndex;
+          	
+    		if(hashIndex == EMPTY_SLOT_INDICATOR) {
+    			return numberOfRecordsFound;
+    		}
                    		         		
-     		hashFile.seek(currentBucketNumber);
-     		
-     		int recordOffset = hashFile.readInt();
-            
-            for(int i = recordOffset; i < recordOffset + (RECORD_SIZE * (BUCKET_SIZE / INT_BYTE_SIZE)); i += RECORD_SIZE) {
-            	
-            	heapFile.seek(i);
-				byte[] recordData = new byte[RECORD_SIZE];
+     		hashFile.seek(hashIndex);
+     		byte[] bucketData = new byte[BUCKET_SIZE];
+     		hashFile.read(bucketData); 		
+     		     		     		
+     		for(int bucketPointer = START_POINTER_POSITION; bucketPointer < bucketData.length; bucketPointer += INT_BYTE_SIZE) {       		
+		        int recordPointer = new BigInteger(Arrays.copyOfRange(bucketData, bucketPointer, bucketPointer + INT_BYTE_SIZE)).intValue();
+	    		if(recordPointer == EMPTY_SLOT_INDICATOR) {
+	    			return numberOfRecordsFound;
+	    		}
+		        heapFile.seek(recordPointer);
+		        byte[] recordData = new byte[RECORD_SIZE];
 				heapFile.read(recordData);
-				
-				int valuePointer = 0;
+		        
+				int valuePointer = START_POINTER_POSITION;
 				
 		        int censusYear = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += YEAR_BYTE_SIZE)).intValue();
 		        int blockId = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += BLOCK_ID_BYTE_SIZE)).intValue();
@@ -97,6 +105,7 @@ public class hashquery {
 		        String location = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += LOCATION_BYTE_SIZE)));
 		        
 		        if(buildingName.equals(searchText)) {
+		        	numberOfRecordsFound++;
 					System.out.println("Census year: " + censusYear + "\n" + "Block ID: " + blockId + "\n" + "Property ID: " + propertyId + "\n" + "Base property ID: " + basePropertyId + "\n" + 
 										"Building name: " + buildingName + "\n" + "Street address: " + streetAddress + "\n" + "Small area: " + smallArea + "\n" + "Construction year: " + constructionYear + "\n" + 
 										"Refurbished year: " + refurbishedYear + "\n" + "Number floors: " + numberFloors + "\n" + "Predominant space use: " + predominantSpaceUse + "\n" + 
@@ -108,13 +117,12 @@ public class hashquery {
 					
 		        }
 
-            	
-            }
+     		}
  			
  		} catch (IOException e) {
  			System.out.println("Record not found");
  		}
-         
+         return numberOfRecordsFound;
 	}
 	
 	
@@ -140,6 +148,7 @@ public class hashquery {
             }
         }
         
+        int numberOfRecordsFound = 0;
         long startTime = System.nanoTime();
 
         try {
@@ -148,8 +157,7 @@ public class hashquery {
     		RandomAccessFile heap = new RandomAccessFile(heapFile, "r");
    	     	File hashFile = new File("hash." + pageSize);
             RandomAccessFile hash = new RandomAccessFile(hashFile, "r");
-            System.out.println("QUERY: !" + queryText + "!");
-			searchIndex(pageSize, queryText, heap, hash);
+			numberOfRecordsFound = searchIndex(pageSize, queryText, heap, hash);
 	         
 	        heap.close();
 	        hash.close();
@@ -163,7 +171,7 @@ public class hashquery {
         long endTime = System.nanoTime();
 		
 	    double totalTime = (double)(endTime - startTime) / 1_000_000_000;
-	    
+        System.out.println("Number of records found: " + numberOfRecordsFound);
 	    System.out.println("Data records found in: " + totalTime + " seconds");
 		
 	}

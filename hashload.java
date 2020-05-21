@@ -35,8 +35,8 @@ public class hashload {
     //////////////////////////////////////////
     
     final static int NUMBER_OF_INDEX_SLOTS = 315000;
-    final static int NUMBER_OF_BUCKETS = 63000;
-    final static int BUCKET_SIZE = 5 * INT_BYTE_SIZE;
+    final static int NUMBER_OF_BUCKETS = 67733;
+    final static int BUCKET_SIZE = 30 * INT_BYTE_SIZE;
     final static int PAGE_NUMBER_OFFSET = 3;
     final static int EMPTY_SLOT_INDICATOR = -1;
     final static int START_POINTER_POSITION = 0;
@@ -105,15 +105,13 @@ public class hashload {
     			heapIndex.seek(currentHashIndex);    			
 
     			if(slotPointer == EMPTY_SLOT_INDICATOR) {
-    				       			
     				// There has not been a collision, and we can insert the pointer at this index
     	            heapIndex.writeInt(recordPointer);
-    	            numberOfRecordsIndexed++;
-    	             
+    	            numberOfRecordsIndexed++;      
     	            recordSuccessfullyIndexed = true;
     			}
     			
-    			else {
+    			else {    				
     				
         			// There has been a collision, and we need to use linear probing to find the next available slot to insert the pointer
         			numberOfCollisions++;
