@@ -34,8 +34,7 @@ public class hashload {
     		
     //////////////////////////////////////////
     
-    final static int NUMBER_OF_INDEX_SLOTS = 315000;
-    final static int NUMBER_OF_BUCKETS = 67733;
+    final static int NUMBER_OF_BUCKETS = 17737;
     final static int BUCKET_SIZE = 30 * INT_BYTE_SIZE;
     final static int PAGE_NUMBER_OFFSET = 3;
     final static int EMPTY_SLOT_INDICATOR = -1;
@@ -72,13 +71,16 @@ public class hashload {
 			
             int numberOfRecordsOnPage = new BigInteger(Arrays.copyOfRange(pageBytes, pageSize - PAGE_NUMBER_OFFSET, pageSize)).intValue();
             
+            // Search through records
             for(int pageRecordNumber = START_RECORD_POSITION; pageRecordNumber < numberOfRecordsOnPage; pageRecordNumber++) {
+            	
             	int recordPointer = pageRecordNumber * RECORD_SIZE;
     			// Search through record
 				byte[] recordData = Arrays.copyOfRange(pageBytes, recordPointer, recordPointer + RECORD_SIZE);  					
 				// Find building name
 		        byte[] buildingNameBytes = Arrays.copyOfRange(recordData, BUILDING_NAME_OFFSET, BUILDING_NAME_OFFSET + BUILDING_NAME_BYTE_SIZE);
 		    	String buildingNameString = trimNulls(new String(buildingNameBytes));
+		    	
 		    	// Do not index records where the building name does not exist
 		    	if(!buildingNameString.equals("null")) {
 					int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_BUCKETS) * BUCKET_SIZE;
@@ -127,7 +129,7 @@ public class hashload {
         	}			
 			
 		} catch (IOException e) {
-			System.out.println("Error trying to write to hash index file");
+			System.err.println("Error trying to write to hash index file");
 		}
     }
     
