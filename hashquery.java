@@ -41,6 +41,9 @@ public class hashquery {
     final static int EMPTY_SLOT_INDICATOR = -1;
     final static int START_POINTER_POSITION = 0;
     final static int START_COUNTER = 0;
+    final static char START_RANGE_CHAR = 'J';
+    final static char END_RANGE_CHAR = 'S';
+    final static String RANGE_ARG = "-r";
     
     //////////////////////////////////////////
     
@@ -53,13 +56,22 @@ public class hashquery {
         return position == -1 ? str : str.substring(0, position);
     }
 	
+    /**
+     * Function to search for a record given an input string
+     * @param pageSize
+     * @param searchText
+     * @param heapFile
+     * @param hashFile
+     * @return the number of records found
+     * @throws IOException
+     */
 	private static int searchIndex(int pageSize, String searchText, RandomAccessFile heapFile, RandomAccessFile hashFile) throws IOException {
                          
-		// Convert search text to bytes
-		byte[] buildingNameBytes = Arrays.copyOf(searchText.getBytes(), BUILDING_NAME_BYTE_SIZE);
-		
       	int numberOfRecordsFound = START_COUNTER;
-		
+
+		// Convert search text to bytes
+		byte[] buildingNameBytes = Arrays.copyOf(searchText.getBytes(), BUILDING_NAME_BYTE_SIZE);	
+
 		// Hash the search text
 		int hashIndex = Math.abs((Arrays.hashCode(buildingNameBytes)) % NUMBER_OF_BUCKETS) * BUCKET_SIZE;
 
@@ -74,7 +86,7 @@ public class hashquery {
      		byte[] bucketData = new byte[BUCKET_SIZE];
      		hashFile.read(bucketData); 		
      		
-     		// Loop through the entire bucket
+     		// Loop through the entire bucket one index key at a time
      		for(int bucketPointer = START_POINTER_POSITION; bucketPointer < bucketData.length; bucketPointer += INT_BYTE_SIZE) {
      			
 		        int recordPointer = new BigInteger(Arrays.copyOfRange(bucketData, bucketPointer, bucketPointer + INT_BYTE_SIZE)).intValue();
@@ -86,45 +98,18 @@ public class hashquery {
 	    		
 	    		// Find the position in the heapfile of where the record pointer is pointing
 		        heapFile.seek(recordPointer);
+		        
 		        // Read the entire record at that position
 		        byte[] recordData = new byte[RECORD_SIZE];
 				heapFile.read(recordData);
 		        
-				int valuePointer = START_POINTER_POSITION;
-				
-				// Read the record values
-		        int censusYear = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += YEAR_BYTE_SIZE)).intValue();
-		        int blockId = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += BLOCK_ID_BYTE_SIZE)).intValue();
-		        int propertyId = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += PROPERTY_ID_BYTE_SIZE)).intValue();
-		        int basePropertyId = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += BASE_PROPERTY_ID_BYTE_SIZE)).intValue();
-		        String buildingName = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += BUILDING_NAME_BYTE_SIZE)));
-		        String streetAddress = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += STREET_ADDRESS_BYTE_SIZE)));
-		        String smallArea = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += SMALL_AREA_BYTE_SIZE)));
-		        int constructionYear = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += YEAR_BYTE_SIZE)).intValue();
-		        int refurbishedYear = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += YEAR_BYTE_SIZE)).intValue();
-		        int numberFloors = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += NUMBER_FLOORS_BYTE_SIZE)).intValue();
-		        String predominantSpaceUse = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += PREDOMINANT_SPACE_USE_BYTE_SIZE)));
-		        String accessibilityType = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += ACCESSIBILITY_TYPE_BYTE_SIZE)));
-		        String accessibilityTypeDescription = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += ACCESSIBILITY_TYPE_DESCRIPTION_BYTE_SIZE)));
-		        int accessibilityRating = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += ACCESSIBILITY_RATING_BYTE_SIZE)).intValue();
-		        int bicycleSpaces = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += BICYCLE_SPACES_BYTE_SIZE)).intValue();
-		        int hasShowers = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += HAS_SHOWERS_BYTE_SIZE)).intValue();
-		        float xCoordinate = ByteBuffer.wrap(Arrays.copyOfRange(recordData, valuePointer, valuePointer += COORDINATES_BYTE_SIZE)).getFloat();
-		        float yCoordinate = ByteBuffer.wrap(Arrays.copyOfRange(recordData, valuePointer, valuePointer += COORDINATES_BYTE_SIZE)).getFloat();
-		        String location = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += LOCATION_BYTE_SIZE)));
+				// Extract the building name from that record
+		        String buildingName = trimNulls(new String(Arrays.copyOfRange(recordData, BUILDING_NAME_OFFSET, BUILDING_NAME_OFFSET +BUILDING_NAME_BYTE_SIZE)));
 		        
 		        // If the building name of the record matches the search text input, then print the record
 		        if(buildingName.equals(searchText)) {
 		        	numberOfRecordsFound++;
-					System.out.println("Census year: " + censusYear + "\n" + "Block ID: " + blockId + "\n" + "Property ID: " + propertyId + "\n" + "Base property ID: " + basePropertyId + "\n" + 
-										"Building name: " + buildingName + "\n" + "Street address: " + streetAddress + "\n" + "Small area: " + smallArea + "\n" + "Construction year: " + constructionYear + "\n" + 
-										"Refurbished year: " + refurbishedYear + "\n" + "Number floors: " + numberFloors + "\n" + "Predominant space use: " + predominantSpaceUse + "\n" + 
-										"Accessibility type: " + accessibilityType + "\n" + "Accessibility type description: " + accessibilityTypeDescription + "\n" + 
-										"Accessibility rating: " + accessibilityRating + "\n" + "Bicycle spaces: " + bicycleSpaces + "\n" + "Has showers: " + hasShowers + "\n" + 
-										"x coordinate: " + xCoordinate + "\n" + "y coordinate: " + yCoordinate + "\n" + "Location: " + location);
-					
-					System.out.println("=====================================");
-					
+		        	printRecord(recordData);					
 		        }
 
      		}
@@ -136,12 +121,85 @@ public class hashquery {
         return numberOfRecordsFound;
 	}
 	
+	/**
+	 * Function to perform a range query. The range query searches for all records where the first letter of the building name is between "J" and "S"
+	 * @param pageSize
+	 * @param searchText
+	 * @param heapFile
+	 * @param hashFile
+	 * @return the number of records found
+	 * @throws IOException
+	 */
+	private static int searchRangeQuery(int pageSize, String searchText, RandomAccessFile heapFile, RandomAccessFile hashFile) throws IOException {
+		int numberOfRecordsFound = START_COUNTER;
+ 		hashFile.seek(START_POINTER_POSITION);
+ 		byte[] indexData = new byte[BUCKET_SIZE * NUMBER_OF_BUCKETS];
+ 		hashFile.read(indexData);
+		
+ 		// Read through index one key at a time
+		for(int indexPointer = START_POINTER_POSITION; indexPointer < indexData.length; indexPointer += INT_BYTE_SIZE) {
+			int recordPointer = new BigInteger(Arrays.copyOfRange(indexData, indexPointer, indexPointer + INT_BYTE_SIZE)).intValue();
+    		if(recordPointer != EMPTY_SLOT_INDICATOR) {
+    			heapFile.seek(recordPointer);
+  			
+		        // Read the entire record at that position
+		        byte[] recordData = new byte[RECORD_SIZE];
+				heapFile.read(recordData);
+				
+				// Extract the building name from that record
+		        String buildingName = trimNulls(new String(Arrays.copyOfRange(recordData, BUILDING_NAME_OFFSET, BUILDING_NAME_OFFSET +BUILDING_NAME_BYTE_SIZE)));	
+		        
+		        // If the first char of the building name in the record is in the correct range
+		        if(buildingName.charAt(0) >= START_RANGE_CHAR && buildingName.charAt(0) <= END_RANGE_CHAR) {
+		        	numberOfRecordsFound++;
+		        	printRecord(recordData);					
+		        }
+    		}
+		}
+		
+		return numberOfRecordsFound;
+	}
+	
+	/**
+	 * Function to print record values
+	 * @param recordData the record data in bytes
+	 */
+	private static void printRecord(byte[] recordData) {
+		int valuePointer = START_POINTER_POSITION;
+		
+        int censusYear = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += YEAR_BYTE_SIZE)).intValue();
+        int blockId = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += BLOCK_ID_BYTE_SIZE)).intValue();
+        int propertyId = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += PROPERTY_ID_BYTE_SIZE)).intValue();
+        int basePropertyId = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += BASE_PROPERTY_ID_BYTE_SIZE)).intValue();
+        String buildingName = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += BUILDING_NAME_BYTE_SIZE)));
+        String streetAddress = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += STREET_ADDRESS_BYTE_SIZE)));
+        String smallArea = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += SMALL_AREA_BYTE_SIZE)));
+        int constructionYear = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += YEAR_BYTE_SIZE)).intValue();
+        int refurbishedYear = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += YEAR_BYTE_SIZE)).intValue();
+        int numberFloors = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += NUMBER_FLOORS_BYTE_SIZE)).intValue();
+        String predominantSpaceUse = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += PREDOMINANT_SPACE_USE_BYTE_SIZE)));
+        String accessibilityType = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += ACCESSIBILITY_TYPE_BYTE_SIZE)));
+        String accessibilityTypeDescription = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += ACCESSIBILITY_TYPE_DESCRIPTION_BYTE_SIZE)));
+        int accessibilityRating = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += ACCESSIBILITY_RATING_BYTE_SIZE)).intValue();
+        int bicycleSpaces = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += BICYCLE_SPACES_BYTE_SIZE)).intValue();
+        int hasShowers = new BigInteger(Arrays.copyOfRange(recordData, valuePointer, valuePointer += HAS_SHOWERS_BYTE_SIZE)).intValue();
+        float xCoordinate = ByteBuffer.wrap(Arrays.copyOfRange(recordData, valuePointer, valuePointer += COORDINATES_BYTE_SIZE)).getFloat();
+        float yCoordinate = ByteBuffer.wrap(Arrays.copyOfRange(recordData, valuePointer, valuePointer += COORDINATES_BYTE_SIZE)).getFloat();
+        String location = trimNulls(new String(Arrays.copyOfRange(recordData, valuePointer, valuePointer += LOCATION_BYTE_SIZE)));
+        
+		System.out.println("Census year: " + censusYear + "\n" + "Block ID: " + blockId + "\n" + "Property ID: " + propertyId + "\n" + "Base property ID: " + basePropertyId + "\n" + 
+				"Building name: " + buildingName + "\n" + "Street address: " + streetAddress + "\n" + "Small area: " + smallArea + "\n" + "Construction year: " + constructionYear + "\n" + 
+				"Refurbished year: " + refurbishedYear + "\n" + "Number floors: " + numberFloors + "\n" + "Predominant space use: " + predominantSpaceUse + "\n" + 
+				"Accessibility type: " + accessibilityType + "\n" + "Accessibility type description: " + accessibilityTypeDescription + "\n" + 
+				"Accessibility rating: " + accessibilityRating + "\n" + "Bicycle spaces: " + bicycleSpaces + "\n" + "Has showers: " + hasShowers + "\n" + 
+				"x coordinate: " + xCoordinate + "\n" + "y coordinate: " + yCoordinate + "\n" + "Location: " + location);
+		System.out.println("=====================================");
+	}
 	
 	public static void main(String[] args) {
 				
         int pageSize = 0;
         String queryText = "";
-                
         if (args.length < NUMBER_OF_ARGS) {
             System.err.println("Error! Usage: java hashquery querytext pagesize");
         } else {
@@ -163,13 +221,18 @@ public class hashquery {
         long startTime = System.nanoTime();
 
         try {
-        	
+       	
         	File heapFile = new File("heap." + pageSize);
     		RandomAccessFile heap = new RandomAccessFile(heapFile, "r");
    	     	File hashFile = new File("hash." + pageSize);
             RandomAccessFile hash = new RandomAccessFile(hashFile, "r");
-			numberOfRecordsFound = searchIndex(pageSize, queryText, heap, hash);
-	         
+            if(queryText.equals(RANGE_ARG)) {
+            	numberOfRecordsFound = searchRangeQuery(pageSize, queryText, heap, hash);
+            }
+            else {
+            	numberOfRecordsFound = searchIndex(pageSize, queryText, heap, hash);
+            }
+				         
 	        heap.close();
 	        hash.close();
 	        

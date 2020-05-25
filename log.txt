@@ -1,0 +1,71 @@
+commit 83870a31c6fbc59bac270ae3bc620f016d90e086
+Author: claudia <claudianadalin98@gmail.com>
+Date:   Sat May 23 01:23:33 2020 +1000
+
+    Print all diagnostic messages to stderr
+
+commit ad901a677e0adcab499718a4ee7a12e98ddd1f94
+Author: claudia <claudianadalin98@gmail.com>
+Date:   Thu May 21 18:10:35 2020 +1000
+
+    Fix bug where hashquery was searching through heapfile of bucket size rather than hash index of bucket size
+
+commit ea12186d0d81a50ebd5723071dc9de909d732b06
+Author: claudia <claudianadalin98@gmail.com>
+Date:   Thu May 21 16:12:11 2020 +1000
+
+    Fix bug where hashquery was searching through more records than necessary
+
+commit 1a8bfa8ebdef03f119f8f15a1ae46fcfb11f0722
+Author: claudia <claudianadalin98@gmail.com>
+Date:   Sun May 17 23:07:57 2020 +1000
+
+    Modify hashquery to search through entire bucket to find records
+
+commit 134e46c7e626855bb3ce41ba4d629bace25bc14b
+Author: claudia <claudianadalin98@gmail.com>
+Date:   Sun May 17 17:02:04 2020 +1000
+
+    Modify hashload so the hash index includes multiple records per bucket
+
+commit 45b7b1eff884b665bd4b2cff784ee6e7cf0b9efe
+Author: claudia <claudianadalin98@gmail.com>
+Date:   Wed May 13 22:58:33 2020 +1000
+
+    Fix bug in hashload where page padding bytes were being read
+
+commit 247e5f501850dca4f14b476538760088117aa5c1
+Author: claudia <claudianadalin98@gmail.com>
+Date:   Wed May 13 22:31:42 2020 +1000
+
+    Implement find record from hash index in hashquery
+
+commit 7957d1c8e82d293e12f8da7425f2170c46c063f5
+Author: claudia <claudianadalin98@gmail.com>
+Date:   Wed May 13 17:22:05 2020 +1000
+
+    Separate index initialisation logic into separate function
+
+commit 9d96bdc1c12412f17b02e4d489abf93f6a290454
+Author: claudia <claudianadalin98@gmail.com>
+Date:   Wed May 13 15:35:46 2020 +1000
+
+    Add hashquery
+
+commit 140a8cd01c063128255545ff2c09b606ed2d217d
+Author: claudia <claudianadalin98@gmail.com>
+Date:   Wed May 13 14:47:18 2020 +1000
+
+    Write record pointers to hash index
+
+commit e9ce1d202c502ed00229fc5defa0f6465bbddefb
+Author: claudia <claudianadalin98@gmail.com>
+Date:   Wed May 13 14:06:58 2020 +1000
+
+    Write empty index file
+
+commit 32c83acaad2db8931c6d9ae06050dc67f23c3d2a
+Author: claudia <claudianadalin98@gmail.com>
+Date:   Wed May 13 13:36:23 2020 +1000
+
+    Initial commit
